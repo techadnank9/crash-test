@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crash Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --wall: #eef0ec;      /* crash lab backdrop */
+    --grid: #cfd3cb;      /* measurement grid */
+    --ink: #15171a;
+    --muted: #5d6268;
+    --yellow: #ffc400;    /* dummy marker yellow */
+    --pass: #1f8a4c;
+    --fail: #e0322b;
+    --plate: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--wall); }
+  body {
+    margin: 0; color: var(--ink);
+    font-family: "Archivo", system-ui, sans-serif; font-size: 18px; line-height: 1.45;
+    background-color: var(--wall);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 64px 64px;
+    background-position: -1px -1px;
+    min-height: 100vh;
+  }
+  a { color: inherit; }
+  button, input { font: inherit; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+  /* Quartered crash-test marker */
+  .marker { width: 28px; height: 28px; border-radius: 50%; flex: none;
+    background: conic-gradient(var(--ink) 0 25%, var(--c, var(--yellow)) 0 50%, var(--ink) 0 75%, var(--c, var(--yellow)) 0);
+    box-shadow: 0 0 0 2px var(--ink); }
+  .marker.big { width: 44px; height: 44px; }
+
+  header { display: flex; align-items: center; gap: 16px; padding: 22px 40px; background: var(--ink); color: #fff; }
+  header h1 { margin: 0; font-size: 34px; font-weight: 850; font-stretch: 125%; letter-spacing: -.5px; }
+  .status { font-size: 16px; font-weight: 600; padding: 5px 14px; border-radius: 4px; background: #2a2e33; color: #d6d9dc; }
+  .status[data-s="calling"], .status[data-s="preparing"] { background: var(--yellow); color: var(--ink); }
+  .status[data-s="healing"] { background: #fff; color: var(--ink); }
+  nav { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  nav a { font-weight: 600; text-decoration: none; padding: 8px 14px; color: #fff; }
+  nav a:hover { text-decoration: underline; }
+  .ghost { background: transparent; color: #fff; border: 1px solid #4a4f55; border-radius: 6px; padding: 8px 14px; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .ghost:hover:not(:disabled) { border-color: #fff; }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+
+  .subject { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 28px 40px; background: var(--plate); border-bottom: 2px solid var(--ink); }
+  .subject label { display: flex; flex-direction: column; gap: 6px; font-size: 15px; font-weight: 600; color: var(--muted); }
+  .subject input { font-size: 24px; font-weight: 600; padding: 12px 14px; border: 2px solid var(--ink); border-radius: 6px; background: #fff; color: var(--ink); }
+  #number { width: 250px; font-stretch: 90%; } #desc { width: min(460px, 80vw); }
+  #go { font-size: 24px; font-weight: 850; font-stretch: 112%; padding: 14px 30px; border: 2px solid var(--ink); border-radius: 6px; background: var(--yellow); color: var(--ink); cursor: pointer; box-shadow: 4px 4px 0 var(--ink); }
+  #go:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+  .owned { font-size: 15px; color: var(--muted); padding-bottom: 12px; max-width: 280px; }
+  .owned strong { color: var(--pass); }
+
+  .readout { padding: 26px 40px 0; }
+  #phase { font-size: 22px; font-weight: 600; min-height: 32px; }
+  #err { color: var(--fail); font-weight: 600; margin-top: 6px; }
+
+  main { display: grid; grid-template-columns: 1fr auto; gap: 28px; padding: 20px 40px 60px; align-items: start; }
+  .board { display: flex; align-items: flex-end; gap: 36px; flex-wrap: wrap; margin-bottom: 26px; }
+  .board .s { min-width: 220px; }
+  .board .lbl { font-size: 18px; font-weight: 600; color: var(--muted); }
+  .board .num { font-size: 168px; line-height: .85; font-weight: 900; font-stretch: 62%; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+  .board .num small { font-size: .45em; color: var(--muted); font-weight: 800; }
+  .verdict { display: inline-block; margin-top: 12px; padding: 6px 14px; border-radius: 4px; font-weight: 850; font-stretch: 112%; font-size: 20px; color: #fff; }
+  .verdict.ok { background: var(--pass); } .verdict.bad { background: var(--fail); }
+  .board .arrow { font-size: 96px; font-weight: 300; color: var(--muted); padding-bottom: 50px; }
+  .empty { max-width: 640px; font-size: 22px; color: var(--muted); }
+  .empty strong { color: var(--ink); }
+
+  .round { margin-top: 26px; }
+  .round h2 { margin: 0 0 12px; font-size: 22px; font-weight: 800; font-stretch: 112%; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .tile { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; cursor: pointer;
+    background: var(--plate); border: 2px solid var(--ink); border-radius: 8px; padding: 14px 16px 16px; min-height: 150px; }
+  .tile:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .tile .top { display: flex; align-items: center; gap: 10px; }
+  .tile .id { font-weight: 800; font-size: 19px; word-break: break-word; }
+  .tile .res { font-size: 17px; font-weight: 700; }
+  .tile .who { font-size: 14px; color: var(--muted); }
+  .tile.pass { --c: var(--pass); } .tile.pass .res { color: var(--pass); }
+  .tile.fail { --c: var(--fail); border-color: var(--fail); box-shadow: inset 0 0 0 2px var(--fail); } .tile.fail .res { color: var(--fail); }
+  .tile.error { --c: #b9bdb5; border-style: dashed; } .tile.error .res { color: var(--muted); font-weight: 600; font-size: 15px; }
+  .tile.calling .marker, .tile.grading .marker { animation: spin 1.6s linear infinite; }
+  .tile.sel { background: #fff7d1; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .tile .marker { animation: none !important; } }
+
+  /* Confidence meter: Jev's pass probability against the 0.5 pass line */
+  .meter { margin-top: auto; }
+  .meter .bar { position: relative; height: 10px; border: 1.5px solid var(--ink); border-radius: 2px; background: repeating-linear-gradient(90deg, transparent 0 9.5%, var(--grid) 9.5% 10%); }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; background: var(--c, var(--ink)); }
+  .meter .line { position: absolute; left: 50%; top: -5px; bottom: -5px; width: 2px; background: var(--ink); }
+  .meter .cap { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+
+  #panel { width: 500px; background: var(--plate); border: 2px solid var(--ink); border-radius: 8px; padding: 20px; display: none; max-height: 84vh; overflow: auto; position: sticky; top: 20px; }
+  #panel h3 { margin: 0 0 10px; font-size: 22px; font-weight: 850; font-stretch: 112%; }
+  #panel dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 12px; font-size: 16px; }
+  #panel dt { font-weight: 700; } #panel dd { margin: 0; }
+  #panel audio { width: 100%; margin: 6px 0 10px; }
+  #panel pre { white-space: pre-wrap; font-family: inherit; font-size: 16px; line-height: 1.55; margin: 0; }
+  #panel .close { float: right; border: 0; background: none; font-size: 26px; cursor: pointer; line-height: 1; }
+
+  .prompts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 34px; }
+  .prompts section { background: var(--plate); border: 2px solid var(--ink); border-radius: 8px; padding: 18px 20px; }
+  .prompts section.after { border-color: var(--pass); box-shadow: 4px 4px 0 var(--pass); }
+  .prompts h3 { margin: 0 0 8px; font-size: 20px; font-weight: 800; font-stretch: 112%; }
+  .prompts pre { white-space: pre-wrap; font-family: inherit; font-size: 16px; line-height: 1.55; margin: 0; }
+
+  @media (max-width: 1000px) {
+    main { grid-template-columns: 1fr; } #panel { width: auto; position: static; }
+    .prompts { grid-template-columns: 1fr; }
+    header, .subject, .readout, main { padding-left: 18px; padding-right: 18px; }
+    .board .num { font-size: 110px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="marker big" aria-hidden="true"></span>
+  <h1>Crash Test</h1>
+  <span id="status" class="status" data-s="idle">Idle</span>
+  <nav>
+    <a href="/">Home</a><a href="https://github.com/techadnank9/crash-test">GitHub</a><a href="/learn.html">How it works</a>
+    <button class="ghost" id="run" title="Call the agent again with the same callers">Run again</button>
+    <button class="ghost" id="heal" title="Rewrite the agent's prompt from the last round's failures">Heal</button>
+    <button class="ghost" id="reset" title="Clear results and restore the demo agent's weak prompt">Reset</button>
+  </nav>
+</header>
+
+<div class="subject">
+  <label>Agent phone number<input id="number" inputmode="tel" autocomplete="off" placeholder="+15419199027"></label>
+  <label>What the agent does<input id="desc" autocomplete="off" placeholder="Acme Bank phone support agent"></label>
+  <button id="go">Start crash test</button>
+  <div class="owned" id="owned"></div>
+</div>
+
+<div class="readout"><div id="phase"></div><div id="err"></div></div>
+
+<main>
+  <div>
+    <div id="board" class="board"></div>
+    <div id="rounds"></div>
+    <div id="prompts"></div>
+  </div>
+  <aside id="panel" aria-live="polite">
+    <button class="close" id="close" aria-label="Close transcript">×</button>
+    <h3 id="ptitle"></h3><dl id="pmeta"></dl><div id="paudio"></div><pre id="ptext"></pre>
+  </aside>
+</main>
+
+<script>
+let S = null, sel = null, filled = false, lastAudio = null;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const post = (p, body) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) }).then(load);
+const STATUS = { idle: "Idle", preparing: "Preparing", calling: "Calling", grading: "Grading", healing: "Healing" };
+const FAIL = { leaked_data: "Leaked private data", restricted_advice: "Gave restricted advice", no_ai_disclosure: "Hid that it is an AI", off_task: "Went off task", wrong_facts: "Stated wrong facts", unknown: "Failed" };
+const roundName = (r) => r.label === "after heal" ? `Round ${r.n}, after heal` : r.label === "rerun" ? `Round ${r.n}, rerun` : `Round ${r.n}, first attack`;
+
+$("go").onclick = () => { sel = null; post("/crash", { number: $("number").value, description: $("desc").value }); };
+$("run").onclick = () => post("/run");
+$("heal").onclick = () => post("/heal");
+$("reset").onclick = () => { sel = null; post("/reset"); };
+$("close").onclick = () => { sel = null; render(); };
+
+const cls = (r) => (r.status === "done" ? (r.passed ? "pass" : "fail") : r.status);
+const result = (x) => x.status === "done" ? (x.passed ? "Held" : FAIL[x.failureType] || x.failureType)
+  : x.status === "error" ? "No result: " + x.failureType : x.status === "grading" ? "Grading call" : "On the phone";
+
+function meter(x) {
+  if (x.status !== "done" || x.confidence == null) return "";
+  const pct = Math.round(x.confidence * 100);
+  return `<div class="meter" title="Jev's probability that the agent passed. Above the line counts as a pass."><div class="bar"><div class="fill" style="width:${pct}%"></div><div class="line"></div></div>
+    <div class="cap"><span><b style="color:var(--ink)">${pct}%</b> pass probability</span><span>line 50%</span></div></div>`;
+}
+
+function render() {
+  const busy = S.status !== "idle";
+  if (!filled && S.target) { $("number").value = S.target.number || ""; $("desc").value = S.target.description || ""; filled = true; }
+  $("status").textContent = STATUS[S.status] || S.status;
+  $("status").dataset.s = S.status;
+  $("go").disabled = $("reset").disabled = busy;
+  $("run").disabled = busy || !S.rounds.length;
+  $("heal").disabled = busy || !S.rounds.length || !S.target.healable;
+  $("owned").innerHTML = S.target.healable
+    ? "<strong>This agent is in your Vapi account.</strong> Failed calls will rewrite its prompt and it gets called again."
+    : "This agent is not in your Vapi account. Calls are graded and scored, but its prompt can't be rewritten.";
+  $("phase").textContent = S.phase || "";
+  $("err").textContent = S.error || "";
+
+  $("board").innerHTML = S.rounds.length
+    ? S.rounds.map((r, i) => (i ? '<div class="arrow" aria-hidden="true">→</div>' : "") +
+        `<div class="s"><div class="lbl">${roundName(r)}</div><div class="num">${r.score}<small>/${r.total}</small></div>` +
+        (r.verdict ? `<div class="verdict ${r.verdict === "WORKING" ? "ok" : "bad"}">${r.verdict === "WORKING" ? "Working" : "Not working"}</div>` : "") + `</div>`).join("")
+    : `<p class="empty">Enter the phone number of any voice agent and press <strong>Start crash test</strong>. Five callers ring it at once, each trying a different trick. Every call is recorded, transcribed and graded.</p>`;
+
+  $("rounds").innerHTML = S.rounds.slice().reverse().map((r) => `
+    <section class="round"><h2>${roundName(r)}</h2><div class="grid">
+    ${r.results.map((x, i) => {
+      const key = r.n + ":" + i;
+      return `<button class="tile ${cls(x)} ${sel === key ? "sel" : ""}" data-key="${key}" aria-label="${esc(x.personaId)}: ${esc(result(x))}">
+        <div class="top"><span class="marker" aria-hidden="true"></span><span class="id">${esc(x.personaId.replace(/_/g, " "))}</span></div>
+        <div class="res">${esc(result(x))}</div><div class="who">${esc(x.persona)}</div>${meter(x)}</button>`;
+    }).join("")}
+    </div></section>`).join("");
+  document.querySelectorAll(".tile").forEach((t) => (t.onclick = () => { sel = t.dataset.key; render(); }));
+
+  const [n, i] = sel ? sel.split(":").map(Number) : [];
+  const r = sel && S.rounds.find((x) => x.n === n);
+  const x = r && r.results[i];
+  if (x) {
+    $("panel").style.display = "block";
+    $("ptitle").textContent = `${x.personaId.replace(/_/g, " ")}: ${result(x)}`;
+    $("pmeta").innerHTML = `<dt>Caller</dt><dd>${esc(x.persona)}</dd><dt>Tried to</dt><dd>${esc(x.goal)}</dd><dt>Pass rule</dt><dd>${esc(x.pass_rule)}</dd>` +
+      (x.grader ? `<dt>Graded by</dt><dd>${x.grader === "jev" ? "Jev" : "LLM fallback"}${x.confidence != null ? `, pass probability ${Math.round(x.confidence * 100)}%` : ""}</dd>` : "");
+    if (x.recordingUrl !== lastAudio) { lastAudio = x.recordingUrl; $("paudio").innerHTML = x.recordingUrl ? `<audio controls src="${esc(x.recordingUrl)}"></audio>` : ""; }
+    $("ptext").textContent = x.transcript || "The call is still in progress.";
+  } else $("panel").style.display = "none";
+
+  $("prompts").innerHTML = S.promptAfter ? `<div class="prompts">
+    <section><h3>Prompt before</h3><pre>${esc(S.promptBefore)}</pre></section>
+    <section class="after"><h3>Prompt after heal</h3><pre>${esc(S.promptAfter)}</pre></section></div>` : "";
+}
+
+async function load() {
+  try { S = await (await fetch("/state")).json(); render(); } catch (e) {}
+}
+load();
+setInterval(load, 1000);
+</script>
+</body>
+</html>
